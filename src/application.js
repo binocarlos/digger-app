@@ -15,21 +15,18 @@
 /*
   Module dependencies.
 */
-
 var fs = require('fs');
 var path = require('path');
 var yaml = require('js-yaml');
-
+var _ = require('lodash');
 var util = require('util');
+var ejs = require('ejs');
 
 var EventEmitter = require('events').EventEmitter;
-
+var ErrorHandler = require('./errorhandler');
 var DiggerServe = require('digger-serve');
-var Reception = require('digger-reception');
+var Client = require('digger-client');
 
-var suppliers = {
-	'mongo':require('digger-mongo')
-}
 
 module.exports = Application;
 
@@ -50,6 +47,139 @@ function Application(options){
 
 util.inherits(Application, EventEmitter);
 
+Application.prototype.load_config = function(done){
+	var self = this;
+	var yamlstring = fs.readFileSync(this.config_path, 'utf8');
+
+	yamlstring = ejs.render(yamlstring, {
+		path:function(st){
+			return self.filepath(st);
+		}
+	})
+
+  var doc = yaml.safeLoad(yamlstring);
+
+  done(null, doc);
+}
+
+Application.prototype.bootstrap = function(port, doc, done){
+	var self = this;
+
+	this.doc = doc;
+	this.digger = DiggerServe();
+
+
+	/*
+	
+		now we have the client - we can build things
+		
+	*/
+	this.reception = this.build_reception(this.doc.digger);
+
+	/*
+	
+		this is a supplychain function that loops into the reception
+
+		we use it to provide our websites and scripts with a digger client
+		
+	*/
+	this.connector = this.reception.connector();
+	this.client = Client(this.connector);
+
+	/*
+	
+		now create the suppliers
+		
+	*/
+	this.reception.create_suppliers(this.client);
+
+	/*
+	
+		connect up the sockets created by DiggerServe
+		
+	*/
+
+	this.digger.io.sockets.on('connection', function (socket) {
+
+		/*
+		
+			these are the browser socket methods travelling via our reception connector
+			
+		*/
+		socket.on('request', function(req, reply){
+			connector(req, function(error, results){
+				reply({
+					error:error,
+					results:results
+				})
+			})
+		})
+	  
+	});
+
+
+
+	this.digger.app.use(this.digger.app.router);
+	this.digger.app.use('/__digger/assets', this.digger.express.static(path.normalize(__dirname + '/../assets')));
+	this.digger.app.use(ErrorHandler());
+
+	this.digger.server.listen(port, function(){
+		self.emit('loaded', doc);
+		done();
+	});
+}
+
+Application.prototype.start = function(port, done){
+	var self = this;
+	
+	this.load_config(function(error, doc){
+
+		self.bootstrap(port, doc, function(){
+			self.create_websites(done);
+		});
+	})
+
+}
+
+
+Application.prototype.create_websites = function(done){
+	var self = this;
+	
+		// scoop up the websites in the digger.yaml
+	for(var prop in this.doc){
+		if(prop!=='digger'){
+			var website_config = this.doc[prop];
+
+			/*
+			
+				build the website
+				
+			*/
+			var website = this.build_website(this.digger.express, this.reception, this.client, website_config);
+			this.websites[prop] = website;
+
+			(website_config.domains || []).forEach(function(domain){
+				self.emit('website', domain);
+
+				/*
+				
+					register the domain using the main express vhost module
+					(this will match the domain and serve that app)
+					
+				*/
+				self.digger.register(domain, website);
+			})
+			
+		}
+	}
+
+	done();
+}
+
+Application.prototype.build_reception = require('./reception');
+
+Application.prototype.build_website = require('./website');
+
 Application.prototype.filepath = function(pathname){
 	if(pathname.indexOf('/')!=0){
 		pathname = path.normalize(this.root_path + '/' + pathname);
@@ -57,87 +187,25 @@ Application.prototype.filepath = function(pathname){
 	return pathname;
 }
 
-Application.prototype.start = function(port, done){
-	var self = this;
-	// Get document, or throw exception on error
-	try {
-	  var doc = require(this.config_path);
-	} catch (e) {
-	  throw e;
-	}
 
-	this.doc = doc;
+/*
 
-	var digger = DiggerServe();
+	create an object out of user code
 
-	var reception_config = this.doc.digger;
-	var reception = this.build_reception(reception_config);
-
-	// scoop up the websites in the digger.yaml
-	var found_website = false;
-	for(var prop in this.doc){
-		if(prop!=='digger'){
-			found_website = true;
-			var website_config = this.doc[prop];
-			var website = this.build_website(digger.express, reception, website_config);
-			this.websites[prop] = website;
-
-			(website_config.domains || []).forEach(function(domain){
-				self.emit('website', domain);
-				digger.register(domain, website);
-			})
-
-			
-		}
-	}
-
-	/*
+	pass the client to the constructor
 	
-		the 404 handler
-		
-	*/
-	digger.app.use('/__digger/assets', digger.express.static(path.normalize(__dirname + '/../assets')));
-	digger.app.use(digger.app.router);
-	digger.app.use(function(req, res, next){
-		res.statusCode = 404;
-		res.sendfile(path.normalize(__dirname + '/../assets/404.html'));
-	})
+*/
+Application.prototype.build_module = function(path){
+	var module_path = this.filepath(path);
+	var module = null;
 
-	this.emit('loaded', doc);
-
-	digger.server.listen(port, done);	
-}
-
-Application.prototype.build_reception = function(reception_config){
-	var reception = Reception();
-
-	for(var route in reception_config.suppliers){
-		var supplierobj = reception_config.suppliers[route];
-		if(!suppliers[supplierobj.type]){
-			throw new Error(supplierobj.type + ' is not a recognized supplier');
-		}
-		var supplier = suppliers[supplierobj.type](supplierobj.config);
-		reception.digger(route, supplier);
+	try{
+		var ModuleClass = require(module_path);
+		module = ModuleClass(this.client);
+	}
+	catch (e){
+		throw e;
 	}
 
-	return reception;
-}
-
-Application.prototype.build_website = function(express, reception, website_config){
-	var self = this;
-	
-	var website = express();
-
-	var web_root = website_config.document_root;
-	if(web_root){
-		web_root = this.filepath(web_root);
-		self.emit('www', web_root);
-		website.use(express.static(web_root));
-	}
-
-	var digger_path = website_config.digger;
-	if(digger_path){
-		website.use(digger_path, reception);
-	}
-	return website;
+	return module;
 }

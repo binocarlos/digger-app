@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>404: No Digger Found</title>
+    <title><%= statusCode %>: <%= pagetitle %></title>
     <style>
       body { background-color: #dedede; margin: 0; }
       h1 { padding: 280px 0 0 0; margin: 0; text-align: center; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: normal; }
@@ -11,10 +11,13 @@
     <center>
 
       <h1>
-        404: No Digger Found
+        <%= statusCode %>: <%= pagetitle %>
       </h1>
       <h2>
-        This url has not got a digger application setup
+        <%= pagetext %>
+      </h2>
+      <h2>
+        <%= pagedata %>
       </h2>
       <br />
       <hr />
