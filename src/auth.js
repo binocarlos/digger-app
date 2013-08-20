@@ -4,7 +4,7 @@ var goauth = require('goauth');
 module.exports = function(client, config){
 	var self = this;
 
-	var paths = config.paths || {};
+	config = config || {};
 
 	/*
 
@@ -66,13 +66,7 @@ module.exports = function(client, config){
 		the goauth setup
 		
 	*/
-	var auth = goauth({
-		paths:{
-			login:paths.login || '/login',
-			register:paths.register || '/register',
-			connect:paths.connect || '/connect'
-		}
-	})
+	var auth = goauth(config);
 
 	auth.on('login', function(data, callback){
 

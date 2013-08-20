@@ -140,6 +140,7 @@ Application.prototype.filepath = function(pathname){
 	
 */
 Application.prototype.build_module = function(path, config){
+	var self = this;
 	var module_path = this.filepath(path);
 	var module = null;
 

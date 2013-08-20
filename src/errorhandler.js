@@ -45,6 +45,10 @@ module.exports = function(){
 				pagedata = req.url;
 			}
 		}
+		else if(res.statusCode===500){
+			pagetext = 'There has been an application error';
+			pagedata = req.body;
+		}
 
 		return {
 			statusCode:res.statusCode,

@@ -1,6 +1,7 @@
 var _ = require('lodash');
 var Auth = require('./auth');
 var Client = require('digger-client');
+var fs = require('fs');
 
 module.exports.build_websites = function(done){
 	var self = this;
@@ -93,5 +94,65 @@ module.exports.build_website = function(express, reception, client, website_conf
 	if(digger_path){
 		website.use(digger_path, reception);
 	}
+
+
+	function build_route(filepath){
+
+	}
+
+	/*
+	
+		create a module for each of the routes
+		
+	*/
+	var routes = website_config.routes;
+
+	if(routes){
+		for(var route in routes){
+			var modulename = routes[route];
+
+			if(modulename){
+				var config = {};
+
+				if(typeof(module)==='object'){
+					config = modulename;
+					modulename = module.modulename;
+				}
+
+				if(!fs.existsSync(modulename)){
+					throw new Error(modulename + ' does not exist');
+				}
+
+				/*
+				
+					the module is a single js
+					
+				*/
+				if(modulename.match(/\.js$/)){
+					var module = self.build_module(modulename, config);
+
+					website.use(route, module);
+				}
+				/*
+				
+					the module is a folder of js
+					
+				*/
+				else{
+					var files = fs.readdirSync(modulename) || [];
+
+					files.forEach(function(file){
+						var module = self.build_module(modulename + '/' + file, config);
+
+						website.use(route + '/' + (file.replace(/\.js$/, '')), module);
+					})
+				}
+
+				
+			}
+			
+		}
+	}
+
 	return website;
 }
