@@ -1,6 +1,6 @@
 {
   "name": "digger-app",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Bootstrap a digger application from a YAML file",
   "main": "src/index.js",
   "scripts": {
