@@ -53,14 +53,10 @@ module.exports = function(client, config){
 		userwarehouse
 			.append(user)
 			.ship(function(){
-				console.log('-------------------------------------------');
-				console.dir(user.toJSON());
-				process.exit();
+				callback(null, user.get(0));
 			})
 			.fail(function(error){
-				console.log('-------------------------------------------');
-				console.dir(error);
-				process.exit();
+				callback(error);
 			})
 		
 	}
@@ -81,7 +77,7 @@ module.exports = function(client, config){
 	auth.on('login', function(data, callback){
 
 		load_user(data.username, function(error, user){
-			if(error || !user || user.attr('password')!=data.password){
+			if(error || !user || user.attr('_password')!=data.password){
 				callback('invalid details');
 			}
 			else{
