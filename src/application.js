@@ -86,14 +86,13 @@ Application.prototype.bootstrap = function(port, doc, done){
 		
 	*/
 	this.connector = this.reception.connector();
-	this.client = Client(this.connector);
 
 	/*
 	
 		now create the suppliers
 		
 	*/
-	this.reception.create_warehouses(this.doc.warehouses, this.client);
+	this.reception.create_warehouses(this.doc.warehouses, this.connector);
 
 	/*
 	
@@ -109,7 +108,17 @@ Application.prototype.bootstrap = function(port, doc, done){
 			
 		*/
 		socket.on('request', function(req, reply){
-			connector(req, function(error, results){
+			/*
+			
+				it is important to map the request here to prevent properties being injected from outside
+				
+			*/
+			self.connector({
+				method:req.method,
+				url:req.url,
+				headers:req.headers,
+				body:req.body
+			}, function(error, results){
 				reply({
 					error:error,
 					results:results
@@ -161,11 +170,23 @@ Application.prototype.create_websites = function(done){
 			var website_config = this.doc[prop];
 
 			/*
+	
+				create a $digger that has it's requests flagged as internal and from a particular website
+				
+			*/
+			var client = Client(function(req, reply){
+				req.internal = true;
+				req.website = prop;
+				self.connector(req, reply);
+			})
+
+
+			/*
 			
 				build the website
 				
 			*/
-			var website = this.build_website(this.digger.express, this.reception, this.client, website_config);
+			var website = this.build_website(this.digger.express, this.reception, client, website_config);
 
 			this.websites[prop] = website;
 
@@ -210,9 +231,19 @@ Application.prototype.build_module = function(path, config){
 	var module_path = this.filepath(path);
 	var module = null;
 
+	/*
+	
+		create a $digger that has it's requests flagged as internal
+		
+	*/
+	var client = Client(function(req, reply){
+		req.internal = true;
+		self.connector(req, reply);
+	})
+
 	try{
 		var ModuleClass = require(module_path);
-		module = ModuleClass(config, this.client);
+		module = ModuleClass(config, client);
 	}
 	catch (e){
 		throw e;

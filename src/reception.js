@@ -44,6 +44,7 @@ module.exports = function(reception_config){
 					if(!suppliers[warehouseobj.type]){
 						throw new Error(warehouseobj.type + ' is not a recognized supplier');
 					}	
+					
 					var warehouse = suppliers[warehouseobj.type](config);
 					reception.digger(route, warehouse);
 					self.emit('warehouse', route, warehouseobj);
