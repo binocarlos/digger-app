@@ -25,22 +25,29 @@ module.exports = function(reception_config){
 			now we create the suppliers with a client onto ourself
 			
 		*/
-		reception.create_suppliers = function(client){
+		reception.create_warehouses = function(warehouses, client){
 			
 			/*
 			
 				loop over the suplliers in the yaml file and build each one
 				
 			*/
-			for(var route in reception_config){
-				var supplierobj = reception_config[route];
-				if(!suppliers[supplierobj.type]){
-					throw new Error(supplierobj.type + ' is not a recognized supplier');
-				}
+			for(var route in warehouses){
+				var warehouseobj = warehouses[route];
+				var config = warehouseobj.config;
 
-				var supplier_config = supplierobj.config;
-				var supplier = suppliers[supplierobj.type](supplier_config);
-				reception.digger(route, supplier);
+				if(warehouseobj.type.match(/\.js$/)){
+					var warehouse = this.build_module(warehouseobj.type, config);
+					reception.digger(route, warehouse);
+				}
+				else{
+					if(!suppliers[warehouseobj.type]){
+						throw new Error(warehouseobj.type + ' is not a recognized supplier');
+					}	
+					var warehouse = suppliers[warehouseobj.type](config);
+					reception.digger(route, warehouse);
+					self.emit('warehouse', route, warehouseobj);
+				}
 			}
 		}
 

@@ -59,6 +59,8 @@ Application.prototype.load_config = function(done){
 
   var doc = yaml.safeLoad(yamlstring);
 
+  this.emit('config', doc);
+
   done(null, doc);
 }
 
@@ -74,7 +76,7 @@ Application.prototype.bootstrap = function(port, doc, done){
 		now we have the client - we can build things
 		
 	*/
-	this.reception = this.build_reception(this.doc.digger);
+	this.reception = this.build_reception(this.doc.reception);
 
 	/*
 	
@@ -91,7 +93,7 @@ Application.prototype.bootstrap = function(port, doc, done){
 		now create the suppliers
 		
 	*/
-	this.reception.create_suppliers(this.client);
+	this.reception.create_warehouses(this.doc.warehouses, this.client);
 
 	/*
 	
@@ -144,10 +146,18 @@ Application.prototype.start = function(port, done){
 
 Application.prototype.create_websites = function(done){
 	var self = this;
+
+	// properties that are core to digger - everything else is a website
+	var reserved_props = {
+		name:true,
+		reception:true,
+		warehouses:true
+	}
 	
 		// scoop up the websites in the digger.yaml
 	for(var prop in this.doc){
-		if(prop!=='digger'){
+		if(!reserved_props[prop]){
+
 			var website_config = this.doc[prop];
 
 			/*
@@ -156,6 +166,7 @@ Application.prototype.create_websites = function(done){
 				
 			*/
 			var website = this.build_website(this.digger.express, this.reception, this.client, website_config);
+
 			this.websites[prop] = website;
 
 			(website_config.domains || []).forEach(function(domain){
@@ -195,13 +206,13 @@ Application.prototype.filepath = function(pathname){
 	pass the client to the constructor
 	
 */
-Application.prototype.build_module = function(path){
+Application.prototype.build_module = function(path, config){
 	var module_path = this.filepath(path);
 	var module = null;
 
 	try{
 		var ModuleClass = require(module_path);
-		module = ModuleClass(this.client);
+		module = ModuleClass(config, this.client);
 	}
 	catch (e){
 		throw e;
