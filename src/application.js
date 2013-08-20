@@ -94,42 +94,8 @@ Application.prototype.bootstrap = function(port, doc, done){
 	*/
 	this.reception.create_warehouses(this.doc.warehouses, this.connector);
 
-	/*
+	this.build_sockets();
 	
-		connect up the sockets created by DiggerServe
-		
-	*/
-
-	this.digger.io.sockets.on('connection', function (socket) {
-
-		/*
-		
-			these are the browser socket methods travelling via our reception connector
-			
-		*/
-		socket.on('request', function(req, reply){
-			/*
-			
-				it is important to map the request here to prevent properties being injected from outside
-				
-			*/
-			self.connector({
-				method:req.method,
-				url:req.url,
-				headers:req.headers,
-				body:req.body
-			}, function(error, results){
-				reply({
-					error:error,
-					results:results
-				})
-			})
-		})
-	  
-	});
-
-
-
 	this.digger.app.use(this.digger.app.router);
 	this.digger.app.use('/__digger/assets', this.digger.express.static(path.normalize(__dirname + '/../assets')));
 	this.digger.app.use(ErrorHandler());
@@ -146,71 +112,17 @@ Application.prototype.start = function(port, done){
 	this.load_config(function(error, doc){
 
 		self.bootstrap(port, doc, function(){
-			self.create_websites(done);
+			self.build_websites(done);
 		});
 	})
 
 }
 
 
-Application.prototype.create_websites = function(done){
-	var self = this;
-
-	// properties that are core to digger - everything else is a website
-	var reserved_props = {
-		name:true,
-		reception:true,
-		warehouses:true
-	}
-	
-		// scoop up the websites in the digger.yaml
-	for(var prop in this.doc){
-		if(!reserved_props[prop]){
-
-			var website_config = this.doc[prop];
-
-			/*
-	
-				create a $digger that has it's requests flagged as internal and from a particular website
-				
-			*/
-			var client = Client(function(req, reply){
-				req.internal = true;
-				req.website = prop;
-				self.connector(req, reply);
-			})
-
-
-			/*
-			
-				build the website
-				
-			*/
-			var website = this.build_website(this.digger.express, this.reception, client, website_config);
-
-			this.websites[prop] = website;
-
-			(website_config.domains || []).forEach(function(domain){
-				self.emit('website', domain);
-
-				/*
-				
-					register the domain using the main express vhost module
-					(this will match the domain and serve that app)
-					
-				*/
-				self.digger.register(domain, website);
-			})
-			
-		}
-	}
-
-	done();
-}
-
+Application.prototype.build_sockets = require('./sockets');
 Application.prototype.build_reception = require('./reception');
-
-Application.prototype.build_website = require('./website');
+Application.prototype.build_websites =require('./website').build_websites; 
+Application.prototype.build_website = require('./website').build_website;
 
 Application.prototype.filepath = function(pathname){
 	if(pathname.indexOf('/')!=0){

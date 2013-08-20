@@ -44,7 +44,25 @@ module.exports = function(client, config){
 		
 	*/
 	function create_user(data, callback){
-		var user = client.Container('user', data);
+
+		data._password = data.password;
+		delete(data.password);
+
+		var user = client.container('user', data);
+
+		userwarehouse
+			.append(user)
+			.ship(function(){
+				console.log('-------------------------------------------');
+				console.dir(user.toJSON());
+				process.exit();
+			})
+			.fail(function(error){
+				console.log('-------------------------------------------');
+				console.dir(error);
+				process.exit();
+			})
+		
 	}
 
 	/*
@@ -75,14 +93,13 @@ module.exports = function(client, config){
 
 	auth.on('register', function(data, callback){
 		load_user(data.username, function(error, user){
+
 			if(!error || user){
 				callback('user ' + data.username + ' already exists')
 				return;
 			}
 
-			create_user(user, function(error, user){
-
-			})
+			create_user(data, callback);
 
 		})
 	})
