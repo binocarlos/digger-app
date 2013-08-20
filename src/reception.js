@@ -52,6 +52,15 @@ module.exports = function(reception_config){
 			}
 		}
 
+		/*
+		
+			connect the reception socket handler with the front end .io
+			
+		*/
+		reception.connect_sockets = function(io){
+			io.sockets.on('connection', reception.socket_connector());
+		}
+
 		return reception;	
 	}
 

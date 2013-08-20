@@ -93,9 +93,8 @@ Application.prototype.bootstrap = function(port, doc, done){
 		
 	*/
 	this.reception.create_warehouses(this.doc.warehouses, this.connector);
+	this.reception.connect_sockets(this.digger.io);
 
-	this.build_sockets();
-	
 	this.digger.app.use(this.digger.app.router);
 	this.digger.app.use('/__digger/assets', this.digger.express.static(path.normalize(__dirname + '/../assets')));
 	this.digger.app.use(ErrorHandler());
@@ -118,8 +117,6 @@ Application.prototype.start = function(port, done){
 
 }
 
-
-Application.prototype.build_sockets = require('./sockets');
 Application.prototype.build_reception = require('./reception');
 Application.prototype.build_websites =require('./website').build_websites; 
 Application.prototype.build_website = require('./website').build_website;

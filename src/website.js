@@ -129,6 +129,7 @@ module.exports.build_website = function(express, reception, client, website_conf
 					
 				*/
 				if(modulename.match(/\.js$/)){
+					self.emit('website:module', route, modulename);
 					var module = self.build_module(modulename, config);
 
 					website.use(route, module);
@@ -142,9 +143,10 @@ module.exports.build_website = function(express, reception, client, website_conf
 					var files = fs.readdirSync(modulename) || [];
 
 					files.forEach(function(file){
+						var useroute = route + '/' + (file.replace(/\.js$/, ''));
+						self.emit('website:module', useroute, modulename + '/' + file);
 						var module = self.build_module(modulename + '/' + file, config);
-
-						website.use(route + '/' + (file.replace(/\.js$/, '')), module);
+						website.use(useroute, module);
 					})
 				}
 
