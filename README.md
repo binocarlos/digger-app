@@ -1,63 +1,63 @@
 digger-app
 ==========
 
-Bootstrap a digger application from a YAML file
+A collection of digger modules to quickly developer an application.
 
-Example YAML file:
+## installation
 
-```yaml
+```
+$ npm install digger-app
+```
 
-##############################################
-# the digger database setup
-digger:
-  ##############################################
-  # this lets us access the data in the xml files
-  /config:
-    type: static
-    config:
-      folder: <%- path('xml/config') %>
-  ##############################################
-  # the users warehouse used by the website auth
-  /users/buildright:
-    access: private
-    type: mongo
-    config:
-      database: buildright
-      collection: users
-  ##############################################
-  # the admin users warehouse - this is in a static file
-  # we are in a private repo so this is ok
-  /users/admin:
-    access: private
-    type: static
-    config:
-      file: <%- path('xml/admin/users.xml') %>
-  ##############################################
-  # the projects warehouse for buildright projects
-  /project:
-    access: private
-    type: mongo
-    config:
-      database: buildright
-      provision: collection
+## usage
 
-##############################################
-# the buildright app
-buildright_www:
-  # the folder with the static HTML
-  document_root: www
-  # where to mount our digger api
-  digger: /api/v1
-  auth:
-    # where to mount our authentication
-    url: /auth
-    # what backend digger warehouse will save our users
-    warehouse: /users/buildright
-    events:
-      # the module to run when a user has registered
-      register: <%- path('modules/user_register.js') %>
-  domains:
-    - "buildright.digger.io"
-    - "buildright.local.digger.io"
+```js
+var App = require('digger-app');
+
+// these are the various flavours of digger supplier
+var Mongo = require('digger-mongo');
+var Static = require('digger-static');
+var Mailgun = require('digger-mailgun');
+
+var app = App({
+
+	// a function that intercepts requests to suppliers
+	router:function(req, reply, next){
+
+		var user = req.headers['x-json-user'];
+
+		// the 'internal' flag means a server-side script has triggered this request
+		if(req.internal && !user){
+			return next();
+		}
+
+		// we can do custom routing/security logic here
+
+		next();
+
+	},
+
+	suppliers:{
+
+		// a static supplier that serves digger data from files
+		'/config':Static({
+				folder:__dirname + '/config'
+		}),
+
+		// a mailgun supplier that sends emails
+		'/email':Mailgun({
+			apikey:'...',
+			domain:'...'
+		}),
+
+		// a Mongo supplier to save data
+		'/orders':Mongo({
+			database:'db',
+			collection:'orders',
+			hostname:'127.0.0.1',
+			port:27017
+		}),
+	}
+})
 
 ```

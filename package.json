@@ -3,6 +3,7 @@
   "version": "0.0.8",
   "description": "Bootstrap a digger application from a YAML file",
   "main": "src/index.js",
+  "browserify": "src/browser.js",
   "scripts": {
     "test": "make test"
   },
@@ -19,14 +20,9 @@
     "url": "https://github.com/binocarlos/digger-app/issues"
   },
   "dependencies": {
-    "js-yaml": "~2.1.0",
-    "digger-serve": "~0.0.1",
-    "digger-reception": "~0.0.6",
-    "digger-mongo": "~0.0.4",
-    "digger-static": "~0.0.1",
-    "lodash": "~1.3.1",
-    "ejs": "~0.8.4",
-    "goauth": "~0.0.1",
-    "digger-client": "~0.0.3"
+    "digger-client":"*",
+    "digger-bridge":"*",
+    "digger-supplychain":"*",
+    "digger-stack":"*"
   }
 }
