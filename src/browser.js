@@ -13,8 +13,10 @@ module.exports = function(options){
 		console.log('radio not implemented');
 	})
 
-	$digger.http = bridge.request;
-	$digger.on('http', $digger.http.bind($digger));
+	$digger.http = Bridge.request;
+	$digger.on('http', function(req, done){
+		$digger.http(req, done);
+	})
 
 	return $digger;
 }
