@@ -20,9 +20,9 @@
     "url": "https://github.com/binocarlos/digger-app/issues"
   },
   "dependencies": {
-    "digger-client": "*",
-    "digger-bridge": "*",
-    "digger-supplychain": "*",
-    "digger-stack": "*"
+    "digger-client": "~2.1.1",
+    "digger-bridge": "~1.2.1",
+    "digger-supplychain": "~0.4.4",
+    "digger-stack": "~1.2.2"
   }
 }
